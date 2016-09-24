@@ -135,43 +135,19 @@
         -----------
         2010-08-12 21:21:03.593
 
-
     .NOTES
-        Version History
-        poshcode.org - http://poshcode.org/4967
-        v1.0         - Chad Miller - Initial release
-        v1.1         - Chad Miller - Fixed Issue with connection closing
-        v1.2         - Chad Miller - Added inputfile, SQL auth support, connectiontimeout and output message handling. Updated help documentation
-        v1.3         - Chad Miller - Added As parameter to control DataSet, DataTable or array of DataRow Output type
-        v1.4         - Justin Dearing <zippy1981 _at_ gmail.com> - Added the ability to pass parameters to the query.
-        v1.4.1       - Paul Bryson <atamido _at_ gmail.com> - Added fix to check for null values in parameterized queries and replace with [DBNull]
-        v1.5         - Joel Bennett - add SingleValue output option
-        v1.5.1       - RamblingCookieMonster - Added ParameterSets, set Query and InputFile to mandatory
-        v1.5.2       - RamblingCookieMonster - Added DBNullToNull switch and code from Dave Wyatt. Added parameters to comment based help (need someone with SQL expertise to verify these)
+        Changelog moved to CHANGELOG.md:
+        
+        https://github.com/sqlcollaborative/Invoke-SqlCmd2/blob/master/CHANGELOG.md
 
-        github.com   - https://github.com/RamblingCookieMonster/PowerShell
-        v1.5.3       - RamblingCookieMonster - Replaced DBNullToNull param with PSObject Output option. Added credential support. Added pipeline support for ServerInstance.  Added to GitHub
-                                             - Added AppendServerInstance switch.
-                                             - Updated OutputType attribute, comment based help, parameter attributes (thanks supersobbie), removed username/password params
-                                             - Added help for sqlparameter parameter.
-                                             - Added ErrorAction SilentlyContinue handling to Fill method
-        v1.6.0                               - Added SQLConnection parameter and handling.  Is there a more efficient way to handle the parameter sets?
-                                             - Fixed SQLConnection handling so that it is not closed (we now only close connections we create)
-        v1.6.1       - Shiyang Qiu           - Fixed the verbose option and SQL error handling conflict 
-        v1.6.2       - Shiyang Qiu           - Fixed the .DESCRIPTION.
-                                             - Fixed the non SQL error handling and added Finally Block to close connection.
+    .LINK
+        https://github.com/sqlcollaborative/Invoke-SqlCmd2
 
     .LINK
         https://github.com/RamblingCookieMonster/PowerShell
 
     .LINK
         New-SQLConnection
-
-    .LINK
-        Invoke-SQLBulkCopy
-
-    .LINK
-        Out-DataTable
 
     .FUNCTIONALITY
         SQL

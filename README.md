@@ -3,7 +3,7 @@ Invoke-SqlCmd2
 
 Invoke-SqlCmd2 is a compact function to query SQL Server without other dependencies.  It was originally written by Chad Miller, with numerous community contributions along the way.
 
-Several key benefits to using Invoke-SqlCmd2:
+There are several key benefits to using Invoke-SqlCmd2:
 
 * Lightweight.  No installation needed; just copy or download the file, copy the text, `Install-Module`, etc.
 * Simple parameterized queries.  This was a source of exasperation in [2005](https://blog.codinghorror.com/give-me-parameterized-sql-or-give-me-death/).  Over a decade later, Invoke-SqlCmd is still missing this.
