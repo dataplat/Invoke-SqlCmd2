@@ -10,24 +10,24 @@
 
 * Author: Shiyang Qiu
 * Fixed the verbose option and SQL error handling conflict 
-* Fixed SQLConnection handling so that it is not closed (we now only close connections we create)
 
 ## v1.6.0
 
 * Author: Warren Frame
+* Fixed SQLConnection handling so that it is not closed (we now only close connections we create)
 * Added SQLConnection parameter and handling.  Is there a more efficient way to handle the parameter sets?
-* Added ErrorAction SilentlyContinue handling to Fill method
-* Added help for sqlparameter parameter.
-* Updated OutputType attribute, comment based help, parameter attributes (thanks supersobbie), removed username/password params
-* Added AppendServerInstance switch.
 
 ## v1.5.3
 
 * Author: Warren Frame
 * Replaced DBNullToNull param with PSObject Output option.
+* Added AppendServerInstance switch.
 * Added credential support.
 * Added pipeline support for ServerInstance.
 * Moved [to GitHub](https://github.com/RamblingCookieMonster/PowerShell)
+* Updated OutputType attribute, comment based help, parameter attributes (thanks supersobbie), removed username/password params
+* Added help for sqlparameter parameter.
+* Added ErrorAction SilentlyContinue handling to Fill method
 
 ## v1.5.2
 
