@@ -4,7 +4,7 @@
 ModuleToProcess = 'Invoke-SqlCmd2.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.6.2'
+ModuleVersion = '1.6.4'
 
 # ID used to uniquely identify this module
 GUID = '688f05ef-8460-496c-8600-87c53090634c'
