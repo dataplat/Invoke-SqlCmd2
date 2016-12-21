@@ -406,7 +406,6 @@ function Invoke-Sqlcmd2
             }
             else
             {
-
                 $CSBuilder = New-Object -TypeName System.Data.SqlClient.SqlConnectionStringBuilder
                 $CSBuilder["Server"] = $SQLInstance
                 $CSBuilder["Database"] = $Database
@@ -431,7 +430,7 @@ function Invoke-Sqlcmd2
                         $CSBuilder["Application Name"] = $ScriptName
                     }
                 }
-                $conn = New-Object System.Data.SqlClient.SQLConnection
+                $conn = New-Object -TypeName System.Data.SqlClient.SQLConnection
 
                 $ConnectionString = $CSBuilder.ToString();
                 $conn.ConnectionString = $ConnectionString
