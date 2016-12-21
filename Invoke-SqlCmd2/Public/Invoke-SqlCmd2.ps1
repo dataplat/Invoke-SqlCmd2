@@ -407,31 +407,31 @@ function Invoke-Sqlcmd2
             else
             {
 
-                $CSBuilder = New-Object -TypeName System.Data.SqlClient.SqlConnectionStringBuilder;
-                $CSBuilder["Server"] = $SQLInstance;
-                $CSBuilder["Database"] = $Database;
-                $CSBuilder["Connection Timeout"] = $ConnectionTimeout;
+                $CSBuilder = New-Object -TypeName System.Data.SqlClient.SqlConnectionStringBuilder
+                $CSBuilder["Server"] = $SQLInstance
+                $CSBuilder["Database"] = $Database
+                $CSBuilder["Connection Timeout"] = $ConnectionTimeout
                 
                 if ($Encrypt) {
-                    $CSBuilder["Encrypt"] = $true;
+                    $CSBuilder["Encrypt"] = $true
                 }
 
                 if ($Credential) {
-                    $CSBuilder["Trusted_Connection"] = $false;
+                    $CSBuilder["Trusted_Connection"] = $false
                     $CSBuilder["User ID"] = $Credential.UserName
                     $CSBuilder["Password"] = $Credential.GetNetworkCredential().Password
                 } else {
-                    $CSBuilder["Integrated Security"] = $true;
+                    $CSBuilder["Integrated Security"] = $true
                 }
                 if ($ApplicationName) {
-                    $CSBuilder["Application Name"] = $ApplicationName;
+                    $CSBuilder["Application Name"] = $ApplicationName
                 } else {
-                    $ScriptName = (Get-PSCallStack)[-1].Command.ToString();
+                    $ScriptName = (Get-PSCallStack)[-1].Command.ToString()
                     if ($ScriptName -ne "<ScriptBlock>") {
-                        $CSBuilder["Application Name"] = (Get-PSCallStack)[-1].Command.ToString();
+                        $CSBuilder["Application Name"] = $ScriptName
                     }
                 }
-                $conn = New-Object System.Data.SqlClient.SQLConnection;
+                $conn = New-Object System.Data.SqlClient.SQLConnection
 
                 $ConnectionString = $CSBuilder.ToString();
                 $conn.ConnectionString = $ConnectionString
