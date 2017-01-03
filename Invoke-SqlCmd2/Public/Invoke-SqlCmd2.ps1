@@ -59,6 +59,9 @@ function Invoke-Sqlcmd2
         If specified, use an existing SQLConnection.
             We attempt to open this connection if it is closed
 
+    .PARAMETER ApplicationName
+    	If specified, adds the given string into the ConnectionString's Application Name property which is visible via SQL Server monitoring scripts/utilities to indicate where the query originated.
+
     .INPUTS
         None
             You cannot pipe objects to Invoke-Sqlcmd2
@@ -137,7 +140,7 @@ function Invoke-Sqlcmd2
 
     .NOTES
         Changelog moved to CHANGELOG.md:
-        
+
         https://github.com/sqlcollaborative/Invoke-SqlCmd2/blob/master/CHANGELOG.md
 
     .LINK
@@ -410,7 +413,7 @@ function Invoke-Sqlcmd2
                 $CSBuilder["Server"] = $SQLInstance
                 $CSBuilder["Database"] = $Database
                 $CSBuilder["Connection Timeout"] = $ConnectionTimeout
-                
+
                 if ($Encrypt) {
                     $CSBuilder["Encrypt"] = $true
                 }
@@ -432,7 +435,7 @@ function Invoke-Sqlcmd2
                 }
                 $conn = New-Object -TypeName System.Data.SqlClient.SQLConnection
 
-                $ConnectionString = $CSBuilder.ToString();
+                $ConnectionString = $CSBuilder.ToString()
                 $conn.ConnectionString = $ConnectionString
                 Write-Debug "ConnectionString $ConnectionString"
 
