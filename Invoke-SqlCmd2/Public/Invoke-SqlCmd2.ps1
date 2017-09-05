@@ -59,6 +59,9 @@ function Invoke-Sqlcmd2
         If specified, use an existing SQLConnection.
             We attempt to open this connection if it is closed
 
+    .PARAMETER ApplicationName
+    	If specified, adds the given string into the ConnectionString's Application Name property which is visible via SQL Server monitoring scripts/utilities to indicate where the query originated.
+
     .INPUTS
         None
             You cannot pipe objects to Invoke-Sqlcmd2
@@ -137,7 +140,7 @@ function Invoke-Sqlcmd2
 
     .NOTES
         Changelog moved to CHANGELOG.md:
-        
+
         https://github.com/sqlcollaborative/Invoke-SqlCmd2/blob/master/CHANGELOG.md
 
     .LINK
@@ -288,7 +291,13 @@ function Invoke-Sqlcmd2
         [Alias( 'Connection', 'Conn' )]
         [ValidateNotNullOrEmpty()]
         [System.Data.SqlClient.SQLConnection]
-        $SQLConnection
+        $SQLConnection,
+
+        [Parameter( Position=11,
+                    Mandatory=$false )]
+        [Alias( 'Application', 'AppName' )]
+        [String]
+        $ApplicationName
     )
 
     Begin
@@ -400,16 +409,33 @@ function Invoke-Sqlcmd2
             }
             else
             {
-                if ($Credential)
-                {
-                    $ConnectionString = "Server={0};Database={1};User ID={2};Password=`"{3}`";Trusted_Connection=False;Connect Timeout={4};Encrypt={5}" -f $SQLInstance,$Database,$Credential.UserName,$Credential.GetNetworkCredential().Password,$ConnectionTimeout,$Encrypt
-                }
-                else
-                {
-                    $ConnectionString = "Server={0};Database={1};Integrated Security=True;Connect Timeout={2};Encrypt={3}" -f $SQLInstance,$Database,$ConnectionTimeout,$Encrypt
+                $CSBuilder = New-Object -TypeName System.Data.SqlClient.SqlConnectionStringBuilder
+                $CSBuilder["Server"] = $SQLInstance
+                $CSBuilder["Database"] = $Database
+                $CSBuilder["Connection Timeout"] = $ConnectionTimeout
+
+                if ($Encrypt) {
+                    $CSBuilder["Encrypt"] = $true
                 }
 
-                $conn = New-Object System.Data.SqlClient.SQLConnection
+                if ($Credential) {
+                    $CSBuilder["Trusted_Connection"] = $false
+                    $CSBuilder["User ID"] = $Credential.UserName
+                    $CSBuilder["Password"] = $Credential.GetNetworkCredential().Password
+                } else {
+                    $CSBuilder["Integrated Security"] = $true
+                }
+                if ($ApplicationName) {
+                    $CSBuilder["Application Name"] = $ApplicationName
+                } else {
+                    $ScriptName = (Get-PSCallStack)[-1].Command.ToString()
+                    if ($ScriptName -ne "<ScriptBlock>") {
+                        $CSBuilder["Application Name"] = $ScriptName
+                    }
+                }
+                $conn = New-Object -TypeName System.Data.SqlClient.SQLConnection
+
+                $ConnectionString = $CSBuilder.ToString()
                 $conn.ConnectionString = $ConnectionString
                 Write-Debug "ConnectionString $ConnectionString"
 
