@@ -430,7 +430,7 @@ function Invoke-Sqlcmd2 {
 			}
 
 			#Following EventHandler is used for PRINT and RAISERROR T-SQL statements. Executed when -Verbose parameter specified by caller
-            if ($PSBoundParameters.Verbose) {
+			if ($PSBoundParameters.Verbose) {
 				$conn.FireInfoMessageEventOnUserErrors = $false # Shiyang, $true will change the SQL exception to information
 				$handler = [System.Data.SqlClient.SqlInfoMessageEventHandler] { Write-Verbose "$($_)" }
 				$conn.add_InfoMessage($handler)
@@ -459,7 +459,7 @@ function Invoke-Sqlcmd2 {
 			}
 			catch [System.Data.SqlClient.SqlException] {
 				# For SQL exception
-            
+
 				$Err = $_
 
 				Write-Verbose "Capture SQL Error"
