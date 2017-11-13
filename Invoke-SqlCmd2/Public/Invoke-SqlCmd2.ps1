@@ -383,7 +383,7 @@ function Invoke-Sqlcmd2 {
 				else {
 					$CSBuilder["Integrated Security"] = $true
 				}
-				if ($ApplicationName) {
+				if ((Test-Path variable:ApplicationName) -and $ApplicationName) {
 					$CSBuilder["Application Name"] = $ApplicationName
 				}
 				else {
@@ -408,7 +408,7 @@ function Invoke-Sqlcmd2 {
 			}
 			
 			#Following EventHandler is used for PRINT and RAISERROR T-SQL statements. Executed when -Verbose parameter specified by caller
-			if ($PSBoundParameters.Verbose) {
+			if ($PSBoundParameters.ContainsKey('Verbose') -and $PSBoundParameters.Verbose) {
 				$conn.FireInfoMessageEventOnUserErrors = $false # Shiyang, $true will change the SQL exception to information
 				$handler = [System.Data.SqlClient.SqlInfoMessageEventHandler] { Write-Verbose "$($_)" }
 				$conn.add_InfoMessage($handler)
@@ -442,7 +442,7 @@ function Invoke-Sqlcmd2 {
 				
 				Write-Verbose "Capture SQL Error"
 				
-				if ($PSBoundParameters.Verbose) {
+				if ($PSBoundParameters.ContainsKey('Verbose') -and $PSBoundParameters.Verbose) {
 					Write-Verbose "SQL Error:  $Err"
 				} #Shiyang, add the verbose output of exception
 				
@@ -467,7 +467,7 @@ function Invoke-Sqlcmd2 {
 				
 				$Err = $_
 				
-				if ($PSBoundParameters.Verbose) {
+				if ($PSBoundParameters.ContainsKey('Verbose') -and $PSBoundParameters.Verbose) {
 					Write-Verbose "Other Error:  $Err"
 				}
 				
