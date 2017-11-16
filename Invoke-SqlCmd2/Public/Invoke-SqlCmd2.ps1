@@ -277,8 +277,8 @@ function Invoke-Sqlcmd2 {
 		[Alias('Connection', 'Conn')]
 		[ValidateNotNullOrEmpty()]
 		[System.Data.SqlClient.SQLConnection]$SQLConnection,
-		[Parameter( Position=11,
-			Mandatory=$false )]
+		[Parameter( Position = 11,
+			Mandatory = $false )]
 		[Alias( 'Application', 'AppName' )]
 		[String]$ApplicationName
 	)
