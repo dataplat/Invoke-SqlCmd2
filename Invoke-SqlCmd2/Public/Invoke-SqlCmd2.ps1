@@ -63,6 +63,9 @@ function Invoke-Sqlcmd2 {
         .PARAMETER SQLConnection
             Specifies an existing SQLConnection object to use in connecting to SQL Server. If the connection is closed, an attempt will be made to open it.
 
+		.PARAMETER ApplicationName
+			 If specified, adds the given string into the ConnectionString's Application Name property which is visible via SQL Server monitoring scripts/utilities to indicate where the query originated.
+			 
         .INPUTS
             None
                 You cannot pipe objects to Invoke-Sqlcmd2
@@ -164,116 +167,120 @@ function Invoke-Sqlcmd2 {
 	[OutputType([System.Management.Automation.PSCustomObject], [System.Data.DataRow], [System.Data.DataTable], [System.Data.DataTableCollection], [System.Data.DataSet])]
 	param (
 		[Parameter(ParameterSetName = 'Ins-Que',
-				   Position = 0,
-				   Mandatory = $true,
-				   ValueFromPipeline = $true,
-				   ValueFromPipelineByPropertyName = $true,
-				   ValueFromRemainingArguments = $false,
-				   HelpMessage = 'SQL Server Instance required...')]
+			Position = 0,
+			Mandatory = $true,
+			ValueFromPipeline = $true,
+			ValueFromPipelineByPropertyName = $true,
+			ValueFromRemainingArguments = $false,
+			HelpMessage = 'SQL Server Instance required...')]
 		[Parameter(ParameterSetName = 'Ins-Fil',
-				   Position = 0,
-				   Mandatory = $true,
-				   ValueFromPipeline = $true,
-				   ValueFromPipelineByPropertyName = $true,
-				   ValueFromRemainingArguments = $false,
-				   HelpMessage = 'SQL Server Instance required...')]
+			Position = 0,
+			Mandatory = $true,
+			ValueFromPipeline = $true,
+			ValueFromPipelineByPropertyName = $true,
+			ValueFromRemainingArguments = $false,
+			HelpMessage = 'SQL Server Instance required...')]
 		[Alias('Instance', 'Instances', 'ComputerName', 'Server', 'Servers', 'SqlInstance')]
 		[ValidateNotNullOrEmpty()]
 		[string[]]$ServerInstance,
 		[Parameter(Position = 1,
-				   Mandatory = $false,
-				   ValueFromPipelineByPropertyName = $true,
-				   ValueFromRemainingArguments = $false)]
+			Mandatory = $false,
+			ValueFromPipelineByPropertyName = $true,
+			ValueFromRemainingArguments = $false)]
 		[string]$Database,
 		[Parameter(ParameterSetName = 'Ins-Que',
-				   Position = 2,
-				   Mandatory = $true,
-				   ValueFromPipelineByPropertyName = $true,
-				   ValueFromRemainingArguments = $false)]
+			Position = 2,
+			Mandatory = $true,
+			ValueFromPipelineByPropertyName = $true,
+			ValueFromRemainingArguments = $false)]
 		[Parameter(ParameterSetName = 'Con-Que',
-				   Position = 2,
-				   Mandatory = $true,
-				   ValueFromPipelineByPropertyName = $true,
-				   ValueFromRemainingArguments = $false)]
+			Position = 2,
+			Mandatory = $true,
+			ValueFromPipelineByPropertyName = $true,
+			ValueFromRemainingArguments = $false)]
 		[string]$Query,
 		[Parameter(ParameterSetName = 'Ins-Fil',
-				   Position = 2,
-				   Mandatory = $true,
-				   ValueFromPipelineByPropertyName = $true,
-				   ValueFromRemainingArguments = $false)]
+			Position = 2,
+			Mandatory = $true,
+			ValueFromPipelineByPropertyName = $true,
+			ValueFromRemainingArguments = $false)]
 		[Parameter(ParameterSetName = 'Con-Fil',
-				   Position = 2,
-				   Mandatory = $true,
-				   ValueFromPipelineByPropertyName = $true,
-				   ValueFromRemainingArguments = $false)]
-		[ValidateScript({ Test-Path $_ })]
+			Position = 2,
+			Mandatory = $true,
+			ValueFromPipelineByPropertyName = $true,
+			ValueFromRemainingArguments = $false)]
+		[ValidateScript( { Test-Path $_ })]
 		[string]$InputFile,
 		[Parameter(ParameterSetName = 'Ins-Que',
-				   Position = 3,
-				   Mandatory = $false,
-				   ValueFromPipelineByPropertyName = $true,
-				   ValueFromRemainingArguments = $false)]
+			Position = 3,
+			Mandatory = $false,
+			ValueFromPipelineByPropertyName = $true,
+			ValueFromRemainingArguments = $false)]
 		[Parameter(ParameterSetName = 'Ins-Fil',
-				   Position = 3,
-				   Mandatory = $false,
-				   ValueFromPipelineByPropertyName = $true,
-				   ValueFromRemainingArguments = $false)]
+			Position = 3,
+			Mandatory = $false,
+			ValueFromPipelineByPropertyName = $true,
+			ValueFromRemainingArguments = $false)]
 		[Alias('SqlCredential')]
 		[System.Management.Automation.PSCredential]$Credential,
 		[Parameter(ParameterSetName = 'Ins-Que',
-				   Position = 4,
-				   Mandatory = $false,
-				   ValueFromRemainingArguments = $false)]
+			Position = 4,
+			Mandatory = $false,
+			ValueFromRemainingArguments = $false)]
 		[Parameter(ParameterSetName = 'Ins-Fil',
-				   Position = 4,
-				   Mandatory = $false,
-				   ValueFromRemainingArguments = $false)]
+			Position = 4,
+			Mandatory = $false,
+			ValueFromRemainingArguments = $false)]
 		[switch]$Encrypt,
 		[Parameter(Position = 5,
-				   Mandatory = $false,
-				   ValueFromPipelineByPropertyName = $true,
-				   ValueFromRemainingArguments = $false)]
+			Mandatory = $false,
+			ValueFromPipelineByPropertyName = $true,
+			ValueFromRemainingArguments = $false)]
 		[Int32]$QueryTimeout = 600,
 		[Parameter(ParameterSetName = 'Ins-Fil',
-				   Position = 6,
-				   Mandatory = $false,
-				   ValueFromPipelineByPropertyName = $true,
-				   ValueFromRemainingArguments = $false)]
+			Position = 6,
+			Mandatory = $false,
+			ValueFromPipelineByPropertyName = $true,
+			ValueFromRemainingArguments = $false)]
 		[Parameter(ParameterSetName = 'Ins-Que',
-				   Position = 6,
-				   Mandatory = $false,
-				   ValueFromPipelineByPropertyName = $true,
-				   ValueFromRemainingArguments = $false)]
+			Position = 6,
+			Mandatory = $false,
+			ValueFromPipelineByPropertyName = $true,
+			ValueFromRemainingArguments = $false)]
 		[Int32]$ConnectionTimeout = 15,
 		[Parameter(Position = 7,
-				   Mandatory = $false,
-				   ValueFromPipelineByPropertyName = $true,
-				   ValueFromRemainingArguments = $false)]
+			Mandatory = $false,
+			ValueFromPipelineByPropertyName = $true,
+			ValueFromRemainingArguments = $false)]
 		[ValidateSet("DataSet", "DataTable", "DataRow", "PSObject", "SingleValue")]
 		[string]$As = "DataRow",
 		[Parameter(Position = 8,
-				   Mandatory = $false,
-				   ValueFromPipelineByPropertyName = $true,
-				   ValueFromRemainingArguments = $false)]
+			Mandatory = $false,
+			ValueFromPipelineByPropertyName = $true,
+			ValueFromRemainingArguments = $false)]
 		[System.Collections.IDictionary]$SqlParameters,
 		[Parameter(Position = 9,
-				   Mandatory = $false)]
+			Mandatory = $false)]
 		[switch]$AppendServerInstance,
 		[Parameter(ParameterSetName = 'Con-Que',
-				   Position = 10,
-				   Mandatory = $false,
-				   ValueFromPipeline = $false,
-				   ValueFromPipelineByPropertyName = $false,
-				   ValueFromRemainingArguments = $false)]
+			Position = 10,
+			Mandatory = $false,
+			ValueFromPipeline = $false,
+			ValueFromPipelineByPropertyName = $false,
+			ValueFromRemainingArguments = $false)]
 		[Parameter(ParameterSetName = 'Con-Fil',
-				   Position = 10,
-				   Mandatory = $false,
-				   ValueFromPipeline = $false,
-				   ValueFromPipelineByPropertyName = $false,
-				   ValueFromRemainingArguments = $false)]
+			Position = 10,
+			Mandatory = $false,
+			ValueFromPipeline = $false,
+			ValueFromPipelineByPropertyName = $false,
+			ValueFromRemainingArguments = $false)]
 		[Alias('Connection', 'Conn')]
 		[ValidateNotNullOrEmpty()]
-		[System.Data.SqlClient.SQLConnection]$SQLConnection
+		[System.Data.SqlClient.SQLConnection]$SQLConnection,
+		[Parameter( Position=11,
+			Mandatory=$false )]
+		[Alias( 'Application', 'AppName' )]
+		[String]$ApplicationName
 	)
 	
 	begin {
@@ -419,7 +426,7 @@ function Invoke-Sqlcmd2 {
 			
 			if ($SqlParameters -ne $null) {
 				$SqlParameters.GetEnumerator() |
-				ForEach-Object {
+					ForEach-Object {
 					if ($_.Value -ne $null) {
 						$cmd.Parameters.AddWithValue($_.Key, $_.Value)
 					}
