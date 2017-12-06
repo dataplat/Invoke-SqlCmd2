@@ -206,7 +206,7 @@ function Invoke-Sqlcmd2 {
 				   Mandatory = $true,
 				   ValueFromPipelineByPropertyName = $true,
 				   ValueFromRemainingArguments = $false)]
-		[ValidateScript({ Test-Path $_ })]
+		[ValidateScript({ Test-Path -LiteralPath $_ })]
 		[string]$InputFile,
 		[Parameter(ParameterSetName = 'Ins-Que',
 				   Position = 3,
@@ -278,7 +278,7 @@ function Invoke-Sqlcmd2 {
 	
 	begin {
 		if ($InputFile) {
-			$filePath = $(Resolve-Path $InputFile).ProviderPath
+			$filePath = $(Resolve-Path -LiteralPath $InputFile).ProviderPath
 			$Query = [System.IO.File]::ReadAllText("$filePath")
 		}
 		
