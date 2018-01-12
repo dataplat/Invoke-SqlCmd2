@@ -60,6 +60,9 @@ function Invoke-Sqlcmd2 {
         .PARAMETER AppendServerInstance
             If this switch is enabled, the SQL Server instance will be appended to PSObject and DataRow output.
 
+        .PARAMETER ParseGo
+            If this switch is enabled, "GO" statements will be stripped away automatically
+
         .PARAMETER SQLConnection
             Specifies an existing SQLConnection object to use in connecting to SQL Server. If the connection is closed, an attempt will be made to open it.
 
@@ -271,6 +274,7 @@ function Invoke-Sqlcmd2 {
             ValueFromPipeline = $false,
             ValueFromPipelineByPropertyName = $false,
             ValueFromRemainingArguments = $false)]
+        [switch]$ParseGO,
         [Alias('Connection', 'Conn')]
         [ValidateNotNullOrEmpty()]
         [System.Data.SqlClient.SQLConnection]$SQLConnection
@@ -356,6 +360,7 @@ function Invoke-Sqlcmd2 {
                 throw "SQLConnection is not open"
             }
         }
+        $GoSplitterRegex = [regex]'(?smi)^[\s]*GO[\s]*$'
 
     }
     process {
@@ -413,7 +418,11 @@ function Invoke-Sqlcmd2 {
                 $handler = [System.Data.SqlClient.SqlInfoMessageEventHandler] { Write-Verbose "$($_)" }
                 $conn.add_InfoMessage($handler)
             }
-
+            if ($ParseGO) {
+                Write-Verbose "Stripping GOs from source"
+                $Pieces = $GoSplitterRegex.Split($Query)
+                $Query = $Pieces -Join ';'
+            }
             $cmd = New-Object system.Data.SqlClient.SqlCommand($Query, $conn)
             $cmd.CommandTimeout = $QueryTimeout
 
