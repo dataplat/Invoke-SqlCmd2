@@ -61,8 +61,19 @@ function Invoke-Sqlcmd2 {
             If this switch is enabled, the SQL Server instance will be appended to PSObject and DataRow output.
 
         .PARAMETER ParseGo
-            If this switch is enabled, "GO" statements will be stripped away automatically. "GO"s will be recognized if they are on a single line, as this covers
+            If this switch is enabled, "GO" statements will be handled automatically.
+            Every "GO" will effectively run in a separate query, like if you issued multiple Invoke-SqlCmd2 commands.
+            "GO"s will be recognized if they are on a single line, as this covers
             the 95% of the cases "GO" parsing is needed
+            Note:
+                Queries will always target that database, e.g. if you have this Query:
+                    USE DATABASE [dbname]
+                    GO
+                    SELECT * from sys.tables
+                and you call it via
+                    Invoke-SqlCmd2 -ServerInstance instance -Database msdb -Query ...
+                you'll get back tables from msdb, not dbname.
+
 
         .PARAMETER SQLConnection
             Specifies an existing SQLConnection object to use in connecting to SQL Server. If the connection is closed, an attempt will be made to open it.
