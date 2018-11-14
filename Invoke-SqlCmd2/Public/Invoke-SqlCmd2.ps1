@@ -335,7 +335,13 @@ function Invoke-Sqlcmd2 {
 '@
 
             try {
-                Add-Type -TypeDefinition $cSharp -ReferencedAssemblies 'System.Data', 'System.Xml' -ErrorAction stop
+                if ($PSEdition -ne 'Core'){
+                    Add-Type -TypeDefinition $cSharp -ReferencedAssemblies 'System.Data', 'System.Xml' -ErrorAction stop
+                } else {
+                    Add-Type $cSharp -ErrorAction stop
+                }
+
+                
             }
             catch {
                 if (-not $_.ToString() -like "*The type name 'DBNullScrubber' already exists*") {
