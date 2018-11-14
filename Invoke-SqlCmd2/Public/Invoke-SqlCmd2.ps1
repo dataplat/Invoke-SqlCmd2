@@ -28,11 +28,7 @@ function Invoke-Sqlcmd2 {
             Specifies the full path to a file to be used as the query input to Invoke-Sqlcmd2. The file can contain Transact-SQL statements, XQuery statements, sqlcmd commands and scripting variables.
 
         .PARAMETER Credential
-            Allows you to login to servers using SQL Logins as opposed to Windows Auth/Integrated/Trusted. To use:
-
-            $cred = Get-Credential, this pass this $cred to the param.
-
-            Windows Authentication will be used if Credential is not specified. To connect as a different Windows user, run PowerShell as that user.
+            Login to the target instance using alternative credentials. Windows and SQL Authentication supported. Accepts credential objects (Get-Credential)
 
             SECURITY NOTE: If you use the -Debug switch, the connectionstring including plain text password will be sent to the debug stream.
 
@@ -78,9 +74,16 @@ function Invoke-Sqlcmd2 {
         .PARAMETER SQLConnection
             Specifies an existing SQLConnection object to use in connecting to SQL Server. If the connection is closed, an attempt will be made to open it.
 
+        .PARAMETER ApplicationName
+             If specified, adds the given string into the ConnectionString's Application Name property which is visible via SQL Server monitoring scripts/utilities to indicate where the query originated.
+
+        .PARAMETER MessagesToOutput
+            Use this switch to have on the output stream messages too (e.g. PRINT statements). Output will hold the resultset too. See examples for detail
+            NB: only available from Powershell 3 onwards
+
         .INPUTS
-            None
-                You cannot pipe objects to Invoke-Sqlcmd2
+            String[]
+                You can only pipe strings to to Invoke-Sqlcmd2: they will be considered as passed -ServerInstance(s)
 
         .OUTPUTS
         As PSObject:     System.Management.Automation.PSCustomObject
@@ -156,9 +159,23 @@ function Invoke-Sqlcmd2 {
             2010-08-12 21:21:03.593
 
         .EXAMPLE
-            Invoke-SqlCmd -SQLConnection $Conn -Query "SELECT ServerName FROM tblServerInfo WHERE ServerName LIKE @ServerName" -SqlParameters @{"ServerName = "c-is-hyperv-1"}
+            Invoke-SqlCmd2 -SQLConnection $Conn -Query "SELECT ServerName FROM tblServerInfo WHERE ServerName LIKE @ServerName" -SqlParameters @{"ServerName = "c-is-hyperv-1"}
 
             Executes a parameterized query against the existing SQLConnection, with a collection of one parameter to be passed to the query when executed.
+
+        .EXAMPLE
+            Invoke-Sqlcmd2 -ServerInstance "MyComputer\MyInstance" -Query "PRINT 1;SELECT login_time AS 'StartTime' FROM sysprocesses WHERE spid = 1" -Verbose
+
+            Sends "messages" to the Verbose stream, the output stream will hold the results
+
+        .EXAMPLE
+            Invoke-Sqlcmd2 -ServerInstance "MyComputer\MyInstance" -Query "PRINT 1;SELECT login_time AS 'StartTime' FROM sysprocesses WHERE spid = 1" -MessagesToOutput
+
+            Sends "messages" to the output stream (irregardless of -Verbose). If you need to "separate" the results, inspecting the type gets really handy:
+                    $results = Invoke-Sqlcmd2 -ServerInstance ... -MessagesToOutput
+                    $tableResults = $results | Where-Object { $_.GetType().Name -eq 'DataRow' }
+                    $messageResults = $results | Where-Object { $_.GetType().Name -ne 'DataRow' }
+
 
         .NOTES
             Changelog moved to CHANGELOG.md:
@@ -291,16 +308,56 @@ function Invoke-Sqlcmd2 {
             ValueFromRemainingArguments = $false)]
         [Alias('Connection', 'Conn')]
         [ValidateNotNullOrEmpty()]
-        [System.Data.SqlClient.SQLConnection]$SQLConnection
+        [System.Data.SqlClient.SQLConnection]$SQLConnection,
+        [Parameter(Position = 12,
+            Mandatory = $false)]
+        [Alias( 'Application', 'AppName' )]
+        [String]$ApplicationName,
+        [Parameter(Position = 13,
+            Mandatory = $false)]
+        [switch]$MessagesToOutput
     )
 
     begin {
+        function Resolve-SqlError {
+            param($Err)
+            if ($Err) {
+                if ($Err.Exception.GetType().Name -eq 'SqlException') {
+                    # For SQL exception
+                    #$Err = $_
+                    Write-Debug -Message "Capture SQL Error"
+                    if ($PSBoundParameters.Verbose) {
+                        Write-Verbose -Message "SQL Error:  $Err"
+                    } #Shiyang, add the verbose output of exception
+                    switch ($ErrorActionPreference.ToString()) {
+                        { 'SilentlyContinue', 'Ignore' -contains $_ } {   }
+                        'Stop' { throw $Err }
+                        'Continue' { throw $Err }
+                        Default { Throw $Err }
+                    }
+                }
+                else {
+                    # For other exception
+                    Write-Debug -Message "Capture Other Error"
+                    if ($PSBoundParameters.Verbose) {
+                        Write-Verbose -Message "Other Error:  $Err"
+                    }
+                    switch ($ErrorActionPreference.ToString()) {
+                        { 'SilentlyContinue', 'Ignore' -contains $_ } { }
+                        'Stop' { throw $Err }
+                        'Continue' { throw $Err }
+                        Default { throw $Err }
+                    }
+                }
+            }
+
+        }
         if ($InputFile) {
             $filePath = $(Resolve-Path -LiteralPath $InputFile).ProviderPath
             $Query = [System.IO.File]::ReadAllText("$filePath")
         }
 
-        Write-Verbose "Running Invoke-Sqlcmd2 with ParameterSet '$($PSCmdlet.ParameterSetName)'.  Performing query '$Query'."
+        Write-Debug -Message "Running Invoke-Sqlcmd2 with ParameterSet '$($PSCmdlet.ParameterSetName)'.  Performing query '$Query'."
 
         if ($As -eq "PSObject") {
             #This code scrubs DBNulls.  Props to Dave Wyatt
@@ -355,7 +412,7 @@ function Invoke-Sqlcmd2 {
         if ($PSBoundParameters.ContainsKey('SQLConnection')) {
             if ($SQLConnection.State -notlike "Open") {
                 try {
-                    Write-Verbose "Opening connection from '$($SQLConnection.State)' state."
+                    Write-Debug -Message "Opening connection from '$($SQLConnection.State)' state."
                     $SQLConnection.Open()
                 }
                 catch {
@@ -365,7 +422,7 @@ function Invoke-Sqlcmd2 {
 
             if ($Database -and $SQLConnection.Database -notlike $Database) {
                 try {
-                    Write-Verbose "Changing SQLConnection database from '$($SQLConnection.Database)' to $Database."
+                    Write-Debug -Message "Changing SQLConnection database from '$($SQLConnection.Database)' to $Database."
                     $SQLConnection.ChangeDatabase($Database)
                 }
                 catch {
@@ -385,7 +442,7 @@ function Invoke-Sqlcmd2 {
     }
     process {
         foreach ($SQLInstance in $ServerInstance) {
-            Write-Verbose "Querying ServerInstance '$SQLInstance'"
+            Write-Debug -Message "Querying ServerInstance '$SQLInstance'"
 
             if ($PSBoundParameters.Keys -contains "SQLConnection") {
                 $Conn = $SQLConnection
@@ -432,14 +489,9 @@ function Invoke-Sqlcmd2 {
                 }
             }
 
-            #Following EventHandler is used for PRINT and RAISERROR T-SQL statements. Executed when -Verbose parameter specified by caller
-            if ($PSBoundParameters.Verbose) {
-                $conn.FireInfoMessageEventOnUserErrors = $false # Shiyang, $true will change the SQL exception to information
-                $handler = [System.Data.SqlClient.SqlInfoMessageEventHandler] { Write-Verbose "$($_)" }
-                $conn.add_InfoMessage($handler)
-            }
+
             if ($ParseGO) {
-                Write-Verbose "Stripping GOs from source"
+                Write-Debug -Message "Stripping GOs from source"
                 $Pieces = $GoSplitterRegex.Split($Query)
             }
             else {
@@ -466,67 +518,85 @@ function Invoke-Sqlcmd2 {
                 $ds = New-Object system.Data.DataSet
                 $da = New-Object system.Data.SqlClient.SqlDataAdapter($cmd)
 
-                try {
-                    [void]$da.fill($ds)
+                if ($MessagesToOutput) {
+                    $pool = [RunspaceFactory]::CreateRunspacePool(1, [int]$env:NUMBER_OF_PROCESSORS + 1)
+                    $pool.ApartmentState = "MTA"
+                    $pool.Open()
+                    $runspaces = @()
+                    $scriptblock = {
+                        Param ($da, $ds, $conn, $queue )
+                        $conn.FireInfoMessageEventOnUserErrors = $false
+                        $handler = [System.Data.SqlClient.SqlInfoMessageEventHandler] { $queue.Enqueue($_) }
+                        $conn.add_InfoMessage($handler)
+                        $Err = $null
+                        try {
+                            [void]$da.fill($ds)
+                        }
+                        catch {
+                            $Err = $_
+                        }
+                        finally {
+                            $conn.remove_InfoMessage($handler)
+                        }
+                        return $Err
+                    }
+                    $queue = New-Object System.Collections.Concurrent.ConcurrentQueue[string]
+                    $runspace = [PowerShell]::Create()
+                    $null = $runspace.AddScript($scriptblock)
+                    $null = $runspace.AddArgument($da)
+                    $null = $runspace.AddArgument($ds)
+                    $null = $runspace.AddArgument($Conn)
+                    $null = $runspace.AddArgument($queue)
+                    $runspace.RunspacePool = $pool
+                    $runspaces += [PSCustomObject]@{ Pipe = $runspace; Status = $runspace.BeginInvoke() }
+                    # While streaming ...
+                    while ($runspaces.Status.IsCompleted -notcontains $true) {
+                        $item = $null
+                        if ($queue.TryDequeue([ref]$item)) {
+                            "$item"
+                        }
+                    }
+                    # Drain the stream as the runspace is closed, just to be safe
+                    if ($queue.IsEmpty -ne $true) {
+                        $item = $null
+                        while ($queue.TryDequeue([ref]$item)) {
+                            "$item"
+                        }
+                    }
+                    foreach ($runspace in $runspaces) {
+                        $results = $runspace.Pipe.EndInvoke($runspace.Status)
+                        $runspace.Pipe.Dispose()
+                        if ($null -ne $results) {
+                            Resolve-SqlError $results[0]
+                        }
+                    }
+                    $pool.Close()
+                    $pool.Dispose()
                 }
-                catch [System.Data.SqlClient.SqlException] {
-                    # For SQL exception
-
-                    $Err = $_
-
-                    Write-Verbose "Capture SQL Error"
-
+                else {
+                    #Following EventHandler is used for PRINT and RAISERROR T-SQL statements. Executed when -Verbose parameter specified by caller and no -MessageToOutput
                     if ($PSBoundParameters.Verbose) {
-                        Write-Verbose "SQL Error:  $Err"
-                    } #Shiyang, add the verbose output of exception
-
-                    switch ($ErrorActionPreference.tostring()) {
-                        { 'SilentlyContinue', 'Ignore' -contains $_ } {
-
-                        }
-                        'Stop' {
-                            throw $Err
-                        }
-                        'Continue' {
-                            throw $Err
-                        }
-                        Default {
-                            Throw $Err
+                        $conn.FireInfoMessageEventOnUserErrors = $false
+                        $handler = [System.Data.SqlClient.SqlInfoMessageEventHandler] { Write-Verbose "$($_)" }
+                        $conn.add_InfoMessage($handler)
+                    }
+                    try {
+                        [void]$da.fill($ds)
+                    }
+                    catch {
+                        $Err = $_
+                    }
+                    finally {
+                        if ($PSBoundParameters.Verbose) {
+                            $conn.remove_InfoMessage($handler)
                         }
                     }
+                    Resolve-SqlError $Err
                 }
-                catch {
-                    # For other exception
-                    Write-Verbose "Capture Other Error"
-
-                    $Err = $_
-
-                    if ($PSBoundParameters.Verbose) {
-                        Write-Verbose "Other Error:  $Err"
-                    }
-
-                    switch ($ErrorActionPreference.tostring()) {
-                        { 'SilentlyContinue', 'Ignore' -contains $_ } {
-
-                        }
-                        'Stop' {
-                            throw $Err
-                        }
-                        'Continue' {
-                            throw $Err
-                        }
-                        Default {
-                            throw $Err
-                        }
-                    }
+                #Close the connection
+                if (-not $PSBoundParameters.ContainsKey('SQLConnection')) {
+                    $Conn.Close()
                 }
-                finally {
-                    #Close the connection
-                    if (-not $PSBoundParameters.ContainsKey('SQLConnection')) {
-                        $conn.Close()
-                    }
-                }
-
                 if ($AppendServerInstance) {
                     #Basics from Chad Miller
                     $Column = New-Object Data.DataColumn
@@ -557,7 +627,6 @@ function Invoke-Sqlcmd2 {
                             #Scrub DBNulls - Provides convenient results you can use comparisons with
                             #Introduces overhead (e.g. ~2000 rows w/ ~80 columns went from .15 Seconds to .65 Seconds - depending on your data could be much more!)
                             foreach ($row in $ds.Tables[0].Rows) {
-
                                 [DBNullScrubber]::DataRowToPSObject($row)
                             }
                         }
@@ -568,7 +637,7 @@ function Invoke-Sqlcmd2 {
                         }
                     }
                 }
-            }
+            } #foreach ($piece in $Pieces)
         }
     }
 } #Invoke-Sqlcmd2
