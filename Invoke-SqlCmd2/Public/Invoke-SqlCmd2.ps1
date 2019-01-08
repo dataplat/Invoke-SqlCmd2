@@ -1,4 +1,4 @@
-function Invoke-Sqlcmd2 {
+function Invoke-Sqlcmd2New {
     <#
         .SYNOPSIS
             Runs a T-SQL script.
@@ -315,7 +315,11 @@ function Invoke-Sqlcmd2 {
         [String]$ApplicationName,
         [Parameter(Position = 13,
             Mandatory = $false)]
-        [switch]$MessagesToOutput
+        [switch]$MessagesToOutput,
+        [Parameter(Position = 14,
+            Mandatory = $false)]
+        [ValidateScript({ Test-Path $_ -IsValid })]
+        [string]$OutputFile
     )
 
     begin {
@@ -441,6 +445,11 @@ function Invoke-Sqlcmd2 {
 
     }
     process {
+    
+        if(-Not([string]::isNullOrEmpty($OutputFile)) -and $MessagesToOutput) {
+            throw "Parameters OutputFile and MessagesToOutput are mutually exclusive"
+        }
+    
         foreach ($SQLInstance in $ServerInstance) {
             Write-Debug -Message "Querying ServerInstance '$SQLInstance'"
 
@@ -574,7 +583,12 @@ function Invoke-Sqlcmd2 {
                     $pool.Dispose()
                 }
                 else {
-                    #Following EventHandler is used for PRINT and RAISERROR T-SQL statements. Executed when -Verbose parameter specified by caller and no -MessageToOutput
+                    if($OutputFile) {
+                        $conn.FireInfoMessageEventOnUserErrors=$false # Shiyang, $true will change the SQL exception to information
+                        $OutToFileHandler = [System.Data.SqlClient.SqlInfoMessageEventHandler] { Out-File -FilePath $OutputFile -InputObject "$($_)" -Append }
+                        $conn.add_InfoMessage($OutToFileHandler)
+                    }
+                    #Following EventHandler is used for PRINT and RAISERROR T-SQL statements. Executed when -Verbose parameter specified by caller and no -MessagesToOutput
                     if ($PSBoundParameters.Verbose) {
                         $conn.FireInfoMessageEventOnUserErrors = $false
                         $handler = [System.Data.SqlClient.SqlInfoMessageEventHandler] { Write-Verbose "$($_)" }
@@ -590,6 +604,10 @@ function Invoke-Sqlcmd2 {
                         if ($PSBoundParameters.Verbose) {
                             $conn.remove_InfoMessage($handler)
                         }
+                        if($OutToFileHandler -ne $null) {
+                            $conn.remove_InfoMessage($OutToFileHandler)
+                        }
+                
                     }
                     Resolve-SqlError $Err
                 }
