@@ -1,4 +1,4 @@
-function Invoke-Sqlcmd2New {
+function Invoke-Sqlcmd2 {
     <#
         .SYNOPSIS
             Runs a T-SQL script.
