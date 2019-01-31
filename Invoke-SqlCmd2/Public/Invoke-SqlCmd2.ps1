@@ -361,50 +361,21 @@ function Invoke-Sqlcmd2 {
 
         if ($As -eq "PSObject") {
             #This code scrubs DBNulls.  Props to Dave Wyatt
-            $cSharp = @'
-                using System;
-                using System.Data;
-                using System.Management.Automation;
-
-                public class DBNullScrubber
-                {
-                    public static PSObject DataRowToPSObject(DataRow row)
-                    {
-                        PSObject psObject = new PSObject();
-
-                        if (row != null && (row.RowState & DataRowState.Detached) != DataRowState.Detached)
-                        {
-                            foreach (DataColumn column in row.Table.Columns)
-                            {
-                                Object value = null;
-                                if (!row.IsNull(column))
-                                {
-                                    value = row[column];
-                                }
-
-                                psObject.Properties.Add(new PSNoteProperty(column.ColumnName, value));
-                            }
+            function DataRowToPSObject ($row)
+            {
+                $PSObject = New-Object -TypeName psobject 
+            
+                if($null -ne $row -and ($row.RowState -band [System.Data.DataRowState]::Detached) -ne [System.Data.DataRowState]::Detached){
+                    foreach ($column in $row.Table.Columns) {
+                        $value = $null
+                        if(!$row.IsNull($column)){
+                            $value = $row[$column]
                         }
 
-                        return psObject;
+                        $PSObject | Add-Member -MemberType NoteProperty -Name $column.ColumnName -Value $value
                     }
                 }
-'@
-
-            try {
-                if ($PSEdition -ne 'Core'){
-                    Add-Type -TypeDefinition $cSharp -ReferencedAssemblies 'System.Data', 'System.Xml' -ErrorAction stop
-                } else {
-                    Add-Type $cSharp -ErrorAction stop
-                }
-
-                
-            }
-            catch {
-                if (-not $_.ToString() -like "*The type name 'DBNullScrubber' already exists*") {
-                    Write-Warning "Could not load DBNullScrubber.  Defaulting to DataRow output: $_."
-                    $As = "Datarow"
-                }
+                $PSObject
             }
         }
 
@@ -627,7 +598,7 @@ function Invoke-Sqlcmd2 {
                             #Scrub DBNulls - Provides convenient results you can use comparisons with
                             #Introduces overhead (e.g. ~2000 rows w/ ~80 columns went from .15 Seconds to .65 Seconds - depending on your data could be much more!)
                             foreach ($row in $ds.Tables[0].Rows) {
-                                [DBNullScrubber]::DataRowToPSObject($row)
+                                DataRowToPSObject($row)
                             }
                         }
                     }
