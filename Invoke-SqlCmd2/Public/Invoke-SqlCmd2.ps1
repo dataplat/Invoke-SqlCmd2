@@ -370,11 +370,11 @@ function Invoke-Sqlcmd2 {
                         $value = $null
                         if(!$row.IsNull($column)){
                             $value = $row[$column]
-                            $PSObject | Add-Member -MemberType NoteProperty -Name $column.ColumnName -Value $value 
                         }
+
+                        $PSObject | Add-Member -MemberType NoteProperty -Name $column.ColumnName -Value $value
                     }
                 }
-            
                 $PSObject
             }
         }
