@@ -270,3 +270,55 @@ Describe "Invoke-SqlCmd2 with System.Data mocked on PS$PSVersion" {
         }
     }
 }
+
+Describe "Invoke-SqlCmd2 Without Mocking" -Tag Integration {
+
+    function Get-NetConnection {
+        [CmdletBinding()]
+        param($Filter = ".*")
+        foreach ($connection in (netstat -n | where { $_ -match $Filter })) {
+            $Proto, $LocalAddress, $ForeignAddress, $State = $connection.Trim() -split "\s+"
+            [PSCustomObject]@{
+                PSTypeName     = "NetStat.Unresolved"
+                Proto          = $Proto
+                LocalAddress   = $LocalAddress -replace ':[^:]+'
+                ForeignAddress = $ForeignAddress -replace ':[^:]+'
+                State          = $State
+            } | Add-Member LocalPort -NotePropertyValue ($LocalAddress -replace '.*:') -Passthru |
+            Add-Member ForeignPort -NotePropertyValue ($ForeignAddress -replace '.*:') -Passthru
+        }
+    }
+
+    if (!$SqlServerConnection) {
+        # In order for these tests to work, you need a server to test against
+        # The simplest thing is:
+        #   docker pull mcr.microsoft.com/mssql/server:2019-latest
+        #   docker run -e 'ACCEPT_EULA=Y' -e 'SA_PASSWORD=Sup3rS3cr3t!Pass**' -p 1433:1433 -d mcr.microsoft.com/mssql/server:2019-latest
+        # And then define this, globally:
+        $SqlServerConnection = @{
+            ServerInstance = '127.0.0.1'
+            Credential = ''
+        }
+    }
+
+    if (!$SqlServerConnection.Credential.Password.Length -gt 0) {
+        It "Runs SQL Server Integration Tests" {
+            Set-ItResult -Skipped -Because "there are no credentials"
+        }
+    } else {
+        Context "Cleaning up SQL network connections" {
+            $TestQuery = "SELECT {0} AS TenantId"
+
+            It "Runs 1000 queries like a walk in the park" {
+                for ($i = 40001; $i -lt 41000; $i++) {
+                    (Invoke-SqlCmd2 @SqlServerConnection -Query ($TestQuery -f $i)).TenantId | Should -Be $i
+                }
+            }
+
+            It "But leaves no more than a single connection open" {
+                # | Where ForeignPort ... so you can run against 127.0.0.1 (e.g. a docker container)
+                @(Get-NetConnection ":1433" | Where ForeignPort -eq 1433).Count | Should -Be 1
+            }
+        }
+    }
+}
