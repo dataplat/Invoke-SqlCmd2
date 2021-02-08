@@ -212,11 +212,13 @@ function Invoke-Sqlcmd2 {
         [Alias('Instance', 'Instances', 'ComputerName', 'Server', 'Servers', 'SqlInstance')]
         [ValidateNotNullOrEmpty()]
         [string[]]$ServerInstance,
+
         [Parameter(Position = 1,
             Mandatory = $false,
             ValueFromPipelineByPropertyName = $true,
             ValueFromRemainingArguments = $false)]
         [string]$Database,
+
         [Parameter(ParameterSetName = 'Ins-Que',
             Position = 2,
             Mandatory = $true,
@@ -228,6 +230,7 @@ function Invoke-Sqlcmd2 {
             ValueFromPipelineByPropertyName = $true,
             ValueFromRemainingArguments = $false)]
         [string]$Query,
+
         [Parameter(ParameterSetName = 'Ins-Fil',
             Position = 2,
             Mandatory = $true,
@@ -240,6 +243,7 @@ function Invoke-Sqlcmd2 {
             ValueFromRemainingArguments = $false)]
         [ValidateScript( { Test-Path -LiteralPath $_ })]
         [string]$InputFile,
+
         [Parameter(ParameterSetName = 'Ins-Que',
             Position = 3,
             Mandatory = $false,
@@ -252,6 +256,7 @@ function Invoke-Sqlcmd2 {
             ValueFromRemainingArguments = $false)]
         [Alias('SqlCredential')]
         [System.Management.Automation.PSCredential]$Credential,
+
         [Parameter(ParameterSetName = 'Ins-Que',
             Position = 4,
             Mandatory = $false,
@@ -261,11 +266,13 @@ function Invoke-Sqlcmd2 {
             Mandatory = $false,
             ValueFromRemainingArguments = $false)]
         [switch]$Encrypt,
+
         [Parameter(Position = 5,
             Mandatory = $false,
             ValueFromPipelineByPropertyName = $true,
             ValueFromRemainingArguments = $false)]
         [Int32]$QueryTimeout = 600,
+
         [Parameter(ParameterSetName = 'Ins-Fil',
             Position = 6,
             Mandatory = $false,
@@ -277,23 +284,28 @@ function Invoke-Sqlcmd2 {
             ValueFromPipelineByPropertyName = $true,
             ValueFromRemainingArguments = $false)]
         [Int32]$ConnectionTimeout = 15,
+
         [Parameter(Position = 7,
             Mandatory = $false,
             ValueFromPipelineByPropertyName = $true,
             ValueFromRemainingArguments = $false)]
         [ValidateSet("DataSet", "DataTable", "DataRow", "PSObject", "SingleValue")]
         [string]$As = "DataRow",
+
         [Parameter(Position = 8,
             Mandatory = $false,
             ValueFromPipelineByPropertyName = $true,
             ValueFromRemainingArguments = $false)]
         [System.Collections.IDictionary]$SqlParameters,
+
         [Parameter(Position = 9,
             Mandatory = $false)]
         [switch]$AppendServerInstance,
+
         [Parameter(Position = 10,
             Mandatory = $false)]
         [switch]$ParseGO,
+
         [Parameter(ParameterSetName = 'Con-Que',
             Position = 11,
             Mandatory = $false,
@@ -309,10 +321,12 @@ function Invoke-Sqlcmd2 {
         [Alias('Connection', 'Conn')]
         [ValidateNotNullOrEmpty()]
         [System.Data.SqlClient.SQLConnection]$SQLConnection,
+
         [Parameter(Position = 12,
             Mandatory = $false)]
         [Alias( 'Application', 'AppName' )]
         [String]$ApplicationName,
+
         [Parameter(Position = 13,
             Mandatory = $false)]
         [switch]$MessagesToOutput
@@ -322,35 +336,11 @@ function Invoke-Sqlcmd2 {
         function Resolve-SqlError {
             param($Err)
             if ($Err) {
-                if ($Err.Exception.GetType().Name -eq 'SqlException') {
-                    # For SQL exception
-                    #$Err = $_
-                    Write-Debug -Message "Capture SQL Error"
-                    if ($PSBoundParameters.Verbose) {
-                        Write-Verbose -Message "SQL Error:  $Err"
-                    } #Shiyang, add the verbose output of exception
-                    switch ($ErrorActionPreference.ToString()) {
-                        { 'SilentlyContinue', 'Ignore' -contains $_ } {   }
-                        'Stop' { throw $Err }
-                        'Continue' { throw $Err }
-                        Default { Throw $Err }
-                    }
-                }
-                else {
-                    # For other exception
-                    Write-Debug -Message "Capture Other Error"
-                    if ($PSBoundParameters.Verbose) {
-                        Write-Verbose -Message "Other Error:  $Err"
-                    }
-                    switch ($ErrorActionPreference.ToString()) {
-                        { 'SilentlyContinue', 'Ignore' -contains $_ } { }
-                        'Stop' { throw $Err }
-                        'Continue' { throw $Err }
-                        Default { throw $Err }
-                    }
+                Write-Debug -Message "Logged $($Err.Exception.GetType().Name): $($Err.Message)"
+                if ($ErrorActionPreference -notin 'SilentlyContinue', 'Ignore') {
+                    throw $_
                 }
             }
-
         }
         if ($InputFile) {
             $filePath = $(Resolve-Path -LiteralPath $InputFile).ProviderPath
@@ -398,7 +388,7 @@ function Invoke-Sqlcmd2 {
                     Add-Type $cSharp -ErrorAction stop
                 }
 
-                
+
             }
             catch {
                 if (-not $_.ToString() -like "*The type name 'DBNullScrubber' already exists*") {
@@ -500,7 +490,7 @@ function Invoke-Sqlcmd2 {
             # Only execute non-empty statements
             $Pieces = $Pieces | Where-Object { $_.Trim().Length -gt 0 }
             foreach ($piece in $Pieces) {
-                $cmd = New-Object system.Data.SqlClient.SqlCommand($piece, $conn)
+                $cmd = New-Object System.Data.SqlClient.SqlCommand $piece, $conn
                 $cmd.CommandTimeout = $QueryTimeout
 
                 if ($null -ne $SqlParameters) {
@@ -515,8 +505,8 @@ function Invoke-Sqlcmd2 {
                     } > $null
                 }
 
-                $ds = New-Object system.Data.DataSet
-                $da = New-Object system.Data.SqlClient.SqlDataAdapter($cmd)
+                $ds = New-Object System.Data.DataSet
+                $da = New-Object System.Data.SqlClient.SqlDataAdapter $cmd
 
                 if ($MessagesToOutput) {
                     $pool = [RunspaceFactory]::CreateRunspacePool(1, [int]$env:NUMBER_OF_PROCESSORS + 1)
@@ -577,7 +567,11 @@ function Invoke-Sqlcmd2 {
                     #Following EventHandler is used for PRINT and RAISERROR T-SQL statements. Executed when -Verbose parameter specified by caller and no -MessageToOutput
                     if ($PSBoundParameters.Verbose) {
                         $conn.FireInfoMessageEventOnUserErrors = $false
-                        $handler = [System.Data.SqlClient.SqlInfoMessageEventHandler] { Write-Verbose "$($_)" }
+                        $handler = if ($PSVersionTable.PSVersion.Major -lt 5) {
+                            [System.Data.SqlClient.SqlInfoMessageEventHandler] { Write-Verbose "$($_)" }
+                        } else {
+                            [System.Data.SqlClient.SqlInfoMessageEventHandler] { $PSCmdlet.WriteInformation($_, @()) }
+                        }
                         $conn.add_InfoMessage($handler)
                     }
                     try {
