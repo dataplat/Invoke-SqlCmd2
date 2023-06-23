@@ -176,6 +176,10 @@ function Invoke-Sqlcmd2 {
                     $tableResults = $results | Where-Object { $_.GetType().Name -eq 'DataRow' }
                     $messageResults = $results | Where-Object { $_.GetType().Name -ne 'DataRow' }
 
+        .EXAMPLE
+            Invoke-SqlCmd2 -ServerInstance 'MyComputer\MyInstance' -Query "uspMyStoredProcedure" -SqlParameters @{ 'ServerName' = 'c-is-hyperv-1' } -AsStoredProcedure
+
+            Executes a stored procedure, with a collection of one or more parameters to be passed to the procedure when executed.
 
         .NOTES
             Changelog moved to CHANGELOG.md:
@@ -315,7 +319,8 @@ function Invoke-Sqlcmd2 {
         [String]$ApplicationName,
         [Parameter(Position = 13,
             Mandatory = $false)]
-        [switch]$MessagesToOutput
+        [switch]$MessagesToOutput,
+        [switch]$AsStoredProcedure
     )
 
     begin {
@@ -398,7 +403,7 @@ function Invoke-Sqlcmd2 {
                     Add-Type $cSharp -ErrorAction stop
                 }
 
-                
+
             }
             catch {
                 if (-not $_.ToString() -like "*The type name 'DBNullScrubber' already exists*") {
@@ -503,6 +508,10 @@ function Invoke-Sqlcmd2 {
                 $cmd = New-Object system.Data.SqlClient.SqlCommand($piece, $conn)
                 $cmd.CommandTimeout = $QueryTimeout
 
+                if ($AsStoredProcedure) {
+                    $cmd.CommandType = 'StoredProcedure'
+                    $cmd.CommandText = $piece
+                }
                 if ($null -ne $SqlParameters) {
                     $SqlParameters.GetEnumerator() |
                         ForEach-Object {
